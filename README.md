@@ -1,27 +1,31 @@
-# NEPSE Research Workspace V4
+# NEPSE Research Workspace V5
 
-V4 adds all current visual research outputs directly to the website and improves bulk importing.
+V5 fixes the blank dashboard and uses the actual uploaded datasets to seed the research metrics.
 
-## New in V4
+## Actual dataset values now used
 
-- Figures tab with ten current charts
-- Full-size chart preview
-- Interpretation under every chart
-- Preliminary research note bundled into the website
-- Visible warning about the 843-versus-845 event-count discrepancy
-- Multi-file upload with automatic file categorization
-- Exact upload manifest for the current datasets
+- Raw ShareSansar file: 532,274 rows, 778 symbols
+- Clean panel: 530,692 rows, 777 symbols
+- Research dataset: 530,674 rows, 777 symbols
+- Abnormal-event file: 845 events, 354 stocks
+- NEPSE index workbook: 2,549 rows
+- NEPSE Alpha cross-check: 1,157 rows
 
-## Upgrade
+## New features
 
-1. Replace the existing GitHub repository contents with this version.
-2. Commit the changes.
-3. Netlify will deploy automatically.
-4. No new SQL is required if `upgrade_v3.sql` was already run successfully.
-5. Sign out and sign back in after deployment.
+- Editable dashboard metrics
+- Editable dataset catalog
+- Research progress based on manuscript section statuses
+- Data-coverage cards
+- 845-versus-843 event reconciliation note
+- Existing figures and private file uploads remain included
 
-## Add the large datasets
+## Required upgrade steps
 
-The large CSV and Excel files are intentionally not committed to GitHub. Open the website's **Research Files** tab and select all of them at once. Auto-categorization will classify the CSV and Excel files as datasets.
+1. Replace the repository files with V5.
+2. Commit and let Netlify redeploy.
+3. Run `supabase/upgrade_v5.sql` once in Supabase SQL Editor.
+4. Sign out and sign back in.
+5. Open Dashboard and Data Catalog.
 
-See `UPLOAD-MANIFEST.md` for the exact list.
+The dashboard will remain editable, so future results can be changed without replacing the website code.

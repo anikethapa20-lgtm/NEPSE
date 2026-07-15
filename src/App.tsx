@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { BarChart3, BookOpen, FileText, FolderOpen, Images, LogOut, NotebookPen, Scale } from "lucide-react";
+import { BarChart3, BookOpen, Database, FileText, FolderOpen, Images, LogOut, NotebookPen, Scale } from "lucide-react";
 import { supabase } from "./lib/supabase";
 import type { PaperSection } from "./types";
 import Login from "./components/Login";
@@ -10,8 +10,9 @@ import DecisionsPanel from "./components/DecisionsPanel";
 import Dashboard from "./components/Dashboard";
 import FilesPanel from "./components/FilesPanel";
 import FiguresGallery from "./components/FiguresGallery";
+import DataCatalog from "./components/DataCatalog";
 
-type Tab = "dashboard" | "paper" | "notes" | "decisions" | "files" | "figures";
+type Tab = "dashboard" | "paper" | "notes" | "decisions" | "files" | "figures" | "catalog";
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -108,6 +109,9 @@ export default function App() {
           <button className={tab === "figures" ? "active" : ""} onClick={() => setTab("figures")}>
             <Images size={18} /> Figures
           </button>
+          <button className={tab === "catalog" ? "active" : ""} onClick={() => setTab("catalog")}>
+            <Database size={18} /> Data Catalog
+          </button>
           <button className={tab === "files" ? "active" : ""} onClick={() => setTab("files")}>
             <FolderOpen size={18} /> Research Files
           </button>
@@ -142,6 +146,7 @@ export default function App() {
         {!error && tab === "notes" && projectId && <NotesPanel projectId={projectId} />}
         {!error && tab === "decisions" && projectId && <DecisionsPanel projectId={projectId} />}
         {!error && tab === "figures" && <FiguresGallery />}
+        {!error && tab === "catalog" && projectId && <DataCatalog projectId={projectId} />}
         {!error && tab === "files" && projectId && <FilesPanel projectId={projectId} />}
       </main>
     </div>
