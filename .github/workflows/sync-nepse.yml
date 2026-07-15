@@ -1,0 +1,29 @@
+name: Sync NEPSE Data
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "30 12 * * 0-5"
+
+jobs:
+  sync-nepse:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.5"
+
+      - name: Install project packages
+        run: bun install
+
+      - name: Run NEPSE synchronization
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: bun run scripts/sync-nepse.ts
