@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { BookOpen, FileText, LogOut, NotebookPen, Scale } from "lucide-react";
+import { BarChart3, BookOpen, FileText, FolderOpen, LogOut, NotebookPen, Scale } from "lucide-react";
 import { supabase } from "./lib/supabase";
 import type { PaperSection } from "./types";
 import Login from "./components/Login";
 import SectionEditor from "./components/SectionEditor";
 import NotesPanel from "./components/NotesPanel";
 import DecisionsPanel from "./components/DecisionsPanel";
+import Dashboard from "./components/Dashboard";
+import FilesPanel from "./components/FilesPanel";
 
-type Tab = "paper" | "notes" | "decisions";
+type Tab = "dashboard" | "paper" | "notes" | "decisions" | "files";
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -16,7 +18,7 @@ export default function App() {
   const [projectId, setProjectId] = useState("");
   const [sections, setSections] = useState<PaperSection[]>([]);
   const [selectedId, setSelectedId] = useState("");
-  const [tab, setTab] = useState<Tab>("paper");
+  const [tab, setTab] = useState<Tab>("dashboard");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -90,6 +92,9 @@ export default function App() {
         </div>
 
         <nav className="main-nav">
+          <button className={tab === "dashboard" ? "active" : ""} onClick={() => setTab("dashboard")}>
+            <BarChart3 size={18} /> Dashboard
+          </button>
           <button className={tab === "paper" ? "active" : ""} onClick={() => setTab("paper")}>
             <FileText size={18} /> Full Paper
           </button>
@@ -98,6 +103,9 @@ export default function App() {
           </button>
           <button className={tab === "decisions" ? "active" : ""} onClick={() => setTab("decisions")}>
             <Scale size={18} /> Decision Log
+          </button>
+          <button className={tab === "files" ? "active" : ""} onClick={() => setTab("files")}>
+            <FolderOpen size={18} /> Research Files
           </button>
         </nav>
 
@@ -125,11 +133,11 @@ export default function App() {
 
       <main className="workspace">
         {error && <div className="error-banner">{error}</div>}
-        {!error && tab === "paper" && selected && (
-          <SectionEditor section={selected} onSaved={updateSaved} />
-        )}
+        {!error && tab === "dashboard" && projectId && <Dashboard projectId={projectId} sections={sections} />}
+        {!error && tab === "paper" && selected && <SectionEditor section={selected} onSaved={updateSaved} />}
         {!error && tab === "notes" && projectId && <NotesPanel projectId={projectId} />}
         {!error && tab === "decisions" && projectId && <DecisionsPanel projectId={projectId} />}
+        {!error && tab === "files" && projectId && <FilesPanel projectId={projectId} />}
       </main>
     </div>
   );

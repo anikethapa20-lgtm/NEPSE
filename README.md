@@ -1,93 +1,49 @@
-# NEPSE Research Workspace
+# NEPSE Research Workspace V3
 
-Private two-author workspace for:
+This version adds:
 
-**Detecting Abnormal Trading Behavior in the Nepal Stock Exchange (NEPSE)**
+- Research progress dashboard
+- Main empirical metrics
+- Full preliminary-paper content seeded into manuscript sections
+- Detailed research prompts for incomplete sections
+- Private file library for datasets, code, charts, PDFs, and outputs
+- Upload, signed download, category filtering, and deletion
+- 100 MB file limit per upload
+- Supabase Storage security restricted to approved project members
 
-## Authentication model
+## Upgrade an existing installation
 
-This version has:
+1. Replace the GitHub repository files with this version.
+2. In Supabase SQL Editor, run:
 
-- No public signup
-- No magic-link login
-- No password reset page
-- Email-and-password login only
-- User accounts created manually by the project administrator in Supabase
-- Project access controlled through `project_members`
-- Row Level Security on all research data
-
-## 1. Run the database schema
-
-In Supabase:
-
-1. Open **SQL Editor**
-2. Create a new query
-3. Run `supabase/schema.sql`
-
-## 2. Disable public signups
-
-In Supabase:
-
-1. Open **Authentication**
-2. Open **Providers**
-3. Open **Email**
-4. Turn off **Allow new users to sign up**
-5. Keep email/password login enabled
-
-## 3. Create the two user accounts manually
-
-In Supabase:
-
-1. Open **Authentication**
-2. Open **Users**
-3. Click **Add user**
-4. Choose **Create new user**
-5. Enter the author's email and a temporary password
-6. Enable **Auto confirm user**
-7. Repeat for the coauthor
-
-Copy both user UUIDs.
-
-## 4. Add both users to the project
-
-Run this in the Supabase SQL Editor:
-
-```sql
-insert into public.project_members (project_id, user_id, role)
-select id, 'YOUR_USER_UUID'::uuid, 'owner'
-from public.projects
-order by created_at desc
-limit 1;
+```text
+supabase/upgrade_v3.sql
 ```
 
-Then:
-
-```sql
-insert into public.project_members (project_id, user_id, role)
-select id, 'COAUTHOR_USER_UUID'::uuid, 'coauthor'
-from public.projects
-order by created_at desc
-limit 1;
-```
-
-## 5. Netlify environment variables
-
-Add:
+3. Confirm Netlify still has:
 
 ```text
 VITE_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY
 ```
 
-Then trigger a new deployment.
+4. Commit the repository changes or trigger a Netlify redeploy.
+5. Sign out and sign back in.
+6. Open the new Dashboard and Research Files tabs.
 
-## 6. Build settings
+Do not run the original `schema.sql` again if your existing project is already working. Run only `upgrade_v3.sql`.
 
-```text
-Build command: npm run build
-Publish directory: dist
-```
+## File storage
 
-## 7. Replace the repository
+The upgrade creates a private Supabase Storage bucket called `research-files`.
 
-Upload the contents of this folder to the root of your GitHub repository. Do not upload the outer folder itself as an extra nested directory.
+Supported examples:
+
+- CSV and Excel datasets
+- Stata, SPSS, and Parquet files
+- Python, R, SQL, notebooks, and ZIP archives
+- Research papers and PDFs
+- PNG/JPG charts
+- Regression tables and analysis outputs
+
+Files are private. The application creates short-lived signed download links for approved authors.
