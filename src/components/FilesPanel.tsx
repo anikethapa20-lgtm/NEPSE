@@ -13,6 +13,7 @@ export default function FilesPanel({ projectId }: Props) {
   const [files, setFiles] = useState<ResearchFile[]>([]);
   const [selected, setSelected] = useState<FileList | null>(null);
   const [category, setCategory] = useState<ResearchFile["category"]>("dataset");
+  const [autoCategorize, setAutoCategorize] = useState(true);
   const [description, setDescription] = useState("");
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -72,7 +73,7 @@ export default function FilesPanel({ projectId }: Props) {
         storage_path: path,
         mime_type: file.type || null,
         size_bytes: file.size,
-        category,
+        category: autoCategorize ? detectCategory(file.name) : category,
         description: description.trim() || null,
       });
 
@@ -142,14 +143,26 @@ export default function FilesPanel({ projectId }: Props) {
         </div>
 
         <div className="upload-controls">
-          <select value={category} onChange={(e) => setCategory(e.target.value as ResearchFile["category"])}>
-            <option value="dataset">Dataset</option>
-            <option value="figure">Figure or chart</option>
-            <option value="paper">Paper or source</option>
-            <option value="code">Code</option>
-            <option value="output">Analysis output</option>
-            <option value="other">Other</option>
-          </select>
+          <div className="category-control">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={autoCategorize}
+                onChange={(e) => setAutoCategorize(e.target.checked)}
+              />
+              Auto-categorize
+            </label>
+            {!autoCategorize && (
+              <select value={category} onChange={(e) => setCategory(e.target.value as ResearchFile["category"])}>
+                <option value="dataset">Dataset</option>
+                <option value="figure">Figure or chart</option>
+                <option value="paper">Paper or source</option>
+                <option value="code">Code</option>
+                <option value="output">Analysis output</option>
+                <option value="other">Other</option>
+              </select>
+            )}
+          </div>
           <input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -214,4 +227,15 @@ function formatBytes(bytes: number) {
   const units = ["B", "KB", "MB", "GB"];
   const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
   return `${(bytes / Math.pow(1024, index)).toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+}
+
+
+function detectCategory(name: string): ResearchFile["category"] {
+  const lower = name.toLowerCase();
+  if (/\.(csv|xlsx?|dta|sav|parquet)$/.test(lower)) return "dataset";
+  if (/\.(png|jpe?g|svg|webp)$/.test(lower)) return "figure";
+  if (/\.(pdf|docx?|txt|rtf)$/.test(lower)) return "paper";
+  if (/\.(py|r|rmd|do|ipynb|sql|js|ts)$/.test(lower)) return "code";
+  if (/\.(html|tex|log)$/.test(lower)) return "output";
+  return "other";
 }

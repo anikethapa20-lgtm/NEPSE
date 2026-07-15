@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { BarChart3, BookOpen, FileText, FolderOpen, LogOut, NotebookPen, Scale } from "lucide-react";
+import { BarChart3, BookOpen, FileText, FolderOpen, Images, LogOut, NotebookPen, Scale } from "lucide-react";
 import { supabase } from "./lib/supabase";
 import type { PaperSection } from "./types";
 import Login from "./components/Login";
@@ -9,8 +9,9 @@ import NotesPanel from "./components/NotesPanel";
 import DecisionsPanel from "./components/DecisionsPanel";
 import Dashboard from "./components/Dashboard";
 import FilesPanel from "./components/FilesPanel";
+import FiguresGallery from "./components/FiguresGallery";
 
-type Tab = "dashboard" | "paper" | "notes" | "decisions" | "files";
+type Tab = "dashboard" | "paper" | "notes" | "decisions" | "files" | "figures";
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -104,6 +105,9 @@ export default function App() {
           <button className={tab === "decisions" ? "active" : ""} onClick={() => setTab("decisions")}>
             <Scale size={18} /> Decision Log
           </button>
+          <button className={tab === "figures" ? "active" : ""} onClick={() => setTab("figures")}>
+            <Images size={18} /> Figures
+          </button>
           <button className={tab === "files" ? "active" : ""} onClick={() => setTab("files")}>
             <FolderOpen size={18} /> Research Files
           </button>
@@ -137,6 +141,7 @@ export default function App() {
         {!error && tab === "paper" && selected && <SectionEditor section={selected} onSaved={updateSaved} />}
         {!error && tab === "notes" && projectId && <NotesPanel projectId={projectId} />}
         {!error && tab === "decisions" && projectId && <DecisionsPanel projectId={projectId} />}
+        {!error && tab === "figures" && <FiguresGallery />}
         {!error && tab === "files" && projectId && <FilesPanel projectId={projectId} />}
       </main>
     </div>
