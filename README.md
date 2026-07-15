@@ -1,79 +1,93 @@
 # NEPSE Research Workspace
 
-A private two-author workspace for developing the full paper:
+Private two-author workspace for:
 
 **Detecting Abnormal Trading Behavior in the Nepal Stock Exchange (NEPSE)**
 
-## Included
+## Authentication model
 
-- Passwordless email login
-- Membership-only project access
-- Full manuscript outline
-- Section-by-section writing
-- Section status tracking
-- Research analysis notes
-- Methodology and literature notes
-- Research decision log
-- Supabase Row Level Security
-- Netlify deployment configuration
-- Responsive desktop/mobile interface
+This version has:
 
-## 1. Create Supabase project
+- No public signup
+- No magic-link login
+- No password reset page
+- Email-and-password login only
+- User accounts created manually by the project administrator in Supabase
+- Project access controlled through `project_members`
+- Row Level Security on all research data
 
-1. Create a new Supabase project.
-2. Open **SQL Editor**.
-3. Run `supabase/schema.sql`.
-4. In **Authentication > URL Configuration**, add:
-   - `http://localhost:5173`
-   - Your final Netlify URL
-5. Copy the Project URL and anon/publishable key.
+## 1. Run the database schema
 
-## 2. Configure locally
+In Supabase:
 
-Copy `.env.example` to `.env`:
+1. Open **SQL Editor**
+2. Create a new query
+3. Run `supabase/schema.sql`
 
-```bash
-VITE_SUPABASE_URL=your-project-url
-VITE_SUPABASE_ANON_KEY=your-anon-key
+## 2. Disable public signups
+
+In Supabase:
+
+1. Open **Authentication**
+2. Open **Providers**
+3. Open **Email**
+4. Turn off **Allow new users to sign up**
+5. Keep email/password login enabled
+
+## 3. Create the two user accounts manually
+
+In Supabase:
+
+1. Open **Authentication**
+2. Open **Users**
+3. Click **Add user**
+4. Choose **Create new user**
+5. Enter the author's email and a temporary password
+6. Enable **Auto confirm user**
+7. Repeat for the coauthor
+
+Copy both user UUIDs.
+
+## 4. Add both users to the project
+
+Run this in the Supabase SQL Editor:
+
+```sql
+insert into public.project_members (project_id, user_id, role)
+select id, 'YOUR_USER_UUID'::uuid, 'owner'
+from public.projects
+order by created_at desc
+limit 1;
 ```
 
-Then run:
+Then:
 
-```bash
-npm install
-npm run dev
+```sql
+insert into public.project_members (project_id, user_id, role)
+select id, 'COAUTHOR_USER_UUID'::uuid, 'coauthor'
+from public.projects
+order by created_at desc
+limit 1;
 ```
 
-## 3. Approve the two authors
+## 5. Netlify environment variables
 
-Both authors should request a magic login link once. Their accounts will then appear in:
+Add:
 
-**Supabase > Authentication > Users**
+```text
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
+```
 
-Copy each user UUID. In the SQL Editor, run the two membership inserts shown at the bottom of `supabase/schema.sql`.
+Then trigger a new deployment.
 
-This membership step is what prevents anyone else from accessing the workspace, even if they know the website address.
+## 6. Build settings
 
-## 4. Deploy to Netlify
+```text
+Build command: npm run build
+Publish directory: dist
+```
 
-1. Upload this project to a new GitHub repository.
-2. In Netlify, select **Add new project > Import an existing project**.
-3. Choose the GitHub repository.
-4. Build command: `npm run build`
-5. Publish directory: `dist`
-6. Add both environment variables in Netlify:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-7. Deploy.
-8. Add the Netlify production URL to Supabase Authentication redirect URLs.
+## 7. Replace the repository
 
-## Recommended next upgrades
-
-- Automatic version snapshots on every save
-- Comments attached to selected paper sections
-- File storage for datasets, charts, tables, and PDFs
-- Citation/reference manager
-- Export complete manuscript to DOCX and PDF
-- Statistical result library
-- Activity history showing who changed what
-- Side-by-side coauthor review and approval
+Upload the contents of this folder to the root of your GitHub repository. Do not upload the outer folder itself as an extra nested directory.

@@ -163,8 +163,9 @@ begin
     (pid, 'Appendices', 18);
 end $$;
 
--- AFTER BOTH USERS HAVE LOGGED IN ONCE:
--- Find their IDs in Authentication > Users, then replace the placeholders below.
+-- CREATE BOTH USERS MANUALLY IN AUTHENTICATION > USERS:
+-- Use Add user > Create new user, set email/password, and enable Auto confirm user.
+-- Then copy their UUIDs and replace the placeholders below.
 --
 -- insert into public.project_members (project_id, user_id, role)
 -- select id, 'YOUR_USER_UUID'::uuid, 'owner'
