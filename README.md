@@ -1,20 +1,27 @@
-# NEPSE Research Intelligence System V6
+# NEPSE Research Intelligence System V7 — Full Build
 
-The application is now a research database and investigation system rather than a paper editor.
+Every sidebar module is now operational:
 
-Implemented:
-- Data Sources
-- Market Database
-- Event Explorer seeded with all 845 current abnormal events
-- Editable event classification and scoring
-- Corporate Announcements
-- Data Quality issue tracking
-- Research Findings
-- Existing figures, decisions, and research files
+- Dashboard based on database readiness and investigation status
+- Data Sources and private Research Files
+- Searchable Market Database
+- Queue-based Event Detection with parameter history
+- Event Explorer and editable case review
+- Insider indicator with editable weights
+- Pump-and-dump cycle detection and results
+- Corporate disclosure matching
+- Stock Profiles
+- Figures and Tables
+- Data Quality queue
+- Research Findings and Decisions
+- CSV Exports
+- Admin monitoring
 
-Setup:
-1. Replace the repository with V6.
-2. Run `supabase/upgrade_v6_research_system.sql`.
+## Upgrade
+
+1. Replace repository contents with V7.
+2. Run `supabase/upgrade_v7_full_system.sql` in Supabase SQL Editor. This includes the corrected V6 event-date cast and all V7 tables/functions.
 3. Upload `nepse_research_dataset NEW.csv` in Research Files.
-4. Run the GitHub Action `Import Market Dataset`.
-5. The Market Database will contain 530,674 searchable rows.
+4. Run `Import Market Dataset` once.
+5. Queued Event Detection and Pump jobs are processed hourly by `Process Analysis Jobs`, or run that workflow manually.
+6. Run the NEPSE API sync to populate announcements, then use the Match Events button.
