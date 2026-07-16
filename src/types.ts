@@ -51,3 +51,38 @@ export type ProjectMetric = {
   metric_group: string;
   sort_order: number;
 };
+
+
+export type ResearchEvent = {
+  id: number;
+  project_id: string;
+  symbol: string;
+  event_date: string;
+  close_price: number | null;
+  volume: number | null;
+  abnormal_return: number | null;
+  volume_multiple: number | null;
+  return_sigma: number | null;
+  severity_score: number | null;
+  event_year: number | null;
+  classification: string;
+  review_status: string;
+  announcement_match: string | null;
+  insider_score: number | null;
+  pump_score: number | null;
+  reviewer_notes: string | null;
+};
+
+export type DataQualityIssue = {
+  id: string;
+  project_id: string;
+  issue_type: string;
+  symbol: string | null;
+  issue_date: string | null;
+  severity: string;
+  title: string;
+  description: string;
+  possible_cause: string | null;
+  resolution: string | null;
+  status: string;
+};

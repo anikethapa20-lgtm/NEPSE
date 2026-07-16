@@ -11,9 +11,9 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
     "lucide-react": "^0.468.0",
-    "nepse-api-unofficial": "1.0.3",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "csv-parse": "5.6.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.18",
