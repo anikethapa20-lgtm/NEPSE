@@ -2,6 +2,7 @@
   "name": "nepse-research-intelligence-system",
   "private": true,
   "version": "7.0.0",
+  "packageManager": "npm@10.8.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,10 +11,10 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
+    "csv-parse": "5.6.0",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "csv-parse": "5.6.0"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.18",

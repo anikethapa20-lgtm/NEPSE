@@ -2,6 +2,13 @@
   command = "npm run build"
   publish = "dist"
 
+[build.environment]
+  NODE_VERSION = "20"
+  NPM_FLAGS = "--no-audit --no-fund --prefer-offline"
+  NPM_CONFIG_FETCH_RETRIES = "2"
+  NPM_CONFIG_FETCH_RETRY_MINTIMEOUT = "10000"
+  NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT = "60000"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
