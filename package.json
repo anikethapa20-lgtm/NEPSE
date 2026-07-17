@@ -2,7 +2,7 @@
   "name": "nepse-research-intelligence-system",
   "private": true,
   "version": "7.0.1",
-  "packageManager": "npm@10.9.2",
+  "packageManager": "npm@10.9.8",
   "type": "module",
   "scripts": {
     "dev": "vite",
