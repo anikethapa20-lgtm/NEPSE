@@ -449,7 +449,31 @@ function gdeltDate(date: Date) {
   return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "");
 }
 
+
+function gdeltTimestamp(date: Date) {
+  return [
+    date.getUTCFullYear(),
+    String(date.getUTCMonth() + 1).padStart(2, "0"),
+    String(date.getUTCDate()).padStart(2, "0"),
+    String(date.getUTCHours()).padStart(2, "0"),
+    String(date.getUTCMinutes()).padStart(2, "0"),
+    String(date.getUTCSeconds()).padStart(2, "0"),
+  ].join("");
+}
+
 async function crawlGdelt(aliases: Alias[]) {
+  const gdeltSupportedStart = new Date(
+    Date.now() - 89 * 24 * 60 * 60 * 1000
+  );
+
+  if (startDate < gdeltSupportedStart) {
+    startDate = gdeltSupportedStart;
+  }
+
+  console.log(
+    `GDELT recent-news coverage: ${startDate.toISOString()} through ${endDate.toISOString()}`
+  );
+
   const runId = await createRun("gdelt-news");
   let recordsSaved = 0;
   let disclosuresSaved = 0;
@@ -457,8 +481,8 @@ async function crawlGdelt(aliases: Alias[]) {
   try {
     for (const chunk of monthChunks(START_DATE, END_DATE)) {
       const query = encodeURIComponent('(NEPSE OR "Nepal Stock Exchange") (dividend OR bonus OR rights OR merger OR acquisition OR IPO OR FPO OR suspension OR "financial results" OR appointment OR resignation OR penalty)');
-      const endpoint = `https://api.gdeltproject.org/api/v2/doc/doc?query=${query}&mode=ArtList&format=json&maxrecords=250&sort=HybridRel&startdatetime=${gdeltDate(chunk.start)}&enddatetime=${gdeltDate(chunk.end)}`;
-      console.log(`Fetching GDELT ${chunk.start.toISOString().slice(0, 7)}`);
+      const endpoint = `https://api.gdeltproject.org/api/v2/doc/doc?query=${query}&mode=ArtList&format=json&maxrecords=250&sort=HybridRel&startdatetime=${gdeltTimestamp(chunk.start)}&enddatetime=${gdeltTimestamp(chunk.end)}`;
+      console.log(`Fetching GDELT ${gdeltTimestamp(chunk.start)}`);
       let json: any = null;
       let completed = false;
 
@@ -478,7 +502,7 @@ async function crawlGdelt(aliases: Alias[]) {
             :GDELT_DELAY_MS*Math.pow(2,attempt);
 
           console.warn(
-            `GDELT ${chunk.start.toISOString().slice(0,7)}: HTTP 429. `+
+            `GDELT ${gdeltTimestamp(chunk.start)}: HTTP 429. `+
             `Retry ${attempt}/${GDELT_MAX_RETRIES} after ${waitMs}ms`
           );
 
@@ -488,7 +512,7 @@ async function crawlGdelt(aliases: Alias[]) {
 
         if(!response.ok){
           console.warn(
-            `GDELT ${chunk.start.toISOString().slice(0,7)}: HTTP ${response.status}`
+            `GDELT ${gdeltTimestamp(chunk.start)}: HTTP ${response.status}`
           );
           completed=true;
           break;
@@ -498,7 +522,7 @@ async function crawlGdelt(aliases: Alias[]) {
 
         if(!body.trim()){
           console.warn(
-            `GDELT ${chunk.start.toISOString().slice(0,7)}: empty response`
+            `GDELT ${gdeltTimestamp(chunk.start)}: empty response`
           );
           completed=true;
           break;
@@ -510,7 +534,7 @@ async function crawlGdelt(aliases: Alias[]) {
           break;
         }catch{
           console.warn(
-            `GDELT ${chunk.start.toISOString().slice(0,7)}: non-JSON response: `+
+            `GDELT ${gdeltTimestamp(chunk.start)}: non-JSON response: `+
             body.slice(0,160).replace(/\s+/g," ")
           );
 
@@ -527,7 +551,7 @@ async function crawlGdelt(aliases: Alias[]) {
 
       if(!completed||!json){
         console.warn(
-          `Skipping GDELT ${chunk.start.toISOString().slice(0,7)} after retries`
+          `Skipping GDELT ${gdeltTimestamp(chunk.start)} after retries`
         );
         await sleep(GDELT_DELAY_MS);
         continue;
@@ -558,7 +582,7 @@ async function crawlGdelt(aliases: Alias[]) {
           validation_status: "discovery_only",
           source_domain: article.domain || new URL(sourceUrl).hostname,
           language: article.language || null,
-          metadata: { gdelt: true, discovery_only: true, month: chunk.start.toISOString().slice(0, 7) },
+          metadata: { gdelt: true, discovery_only: true, month: gdeltTimestamp(chunk.start) },
         };
       }).filter(Boolean) as EvidenceItem[];
       const saved = await saveItems(items, runId);
