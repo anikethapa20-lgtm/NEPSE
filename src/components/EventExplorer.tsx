@@ -88,7 +88,7 @@ export default function EventExplorer({ projectId }: { projectId: string }) {
 
       <div className="data-table-wrap">
         <table className="system-table">
-          <thead><tr><th>Symbol</th><th>Date</th><th>Abnormal return</th><th>Volume multiple</th><th>Return sigma</th><th>Severity</th><th>Classification</th><th>Status</th></tr></thead>
+          <thead><tr><th>Symbol</th><th>Date</th><th>Abnormal return</th><th>Volume multiple</th><th>Return sigma</th><th>Severity</th><th>Classification</th><th>Confidence</th><th>Evidence</th><th>Status</th></tr></thead>
           <tbody>
             {events.map((event) => (
               <tr key={event.id} onClick={() => setSelected(event)}>
@@ -96,10 +96,10 @@ export default function EventExplorer({ projectId }: { projectId: string }) {
                 <td className={(event.abnormal_return || 0) >= 0 ? "positive" : "negative"}>{pct(event.abnormal_return)}</td>
                 <td>{num(event.volume_multiple)}×</td><td>{num(event.return_sigma)}σ</td>
                 <td><span className="severity-badge">{num(event.severity_score)}</span></td>
-                <td>{event.classification}</td><td><span className={`status-pill ${event.review_status === "reviewed" ? "complete" : "drafting"}`}>{event.review_status}</span></td>
+                <td>{event.auto_classification || event.classification}</td><td>{event.confidence_score==null?"—":Number(event.confidence_score).toFixed(0)}</td><td>{(event.matched_disclosure_count||0)}D · {(event.matched_pump_cycle_count||0)}P</td><td><span className={`status-pill ${event.review_status === "reviewed" ? "complete" : "drafting"}`}>{event.review_status}</span></td>
               </tr>
             ))}
-            {!loading && !events.length && <tr><td colSpan={8} className="empty-cell">No events match the current filters.</td></tr>}
+            {!loading && !events.length && <tr><td colSpan={10} className="empty-cell">No events match the current filters.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -115,7 +115,7 @@ export default function EventExplorer({ projectId }: { projectId: string }) {
           <aside className="event-drawer" onClick={(e) => e.stopPropagation()}>
             <div className="drawer-header"><div><div className="eyebrow">EVENT #{selected.id}</div><h2>{selected.symbol} · {selected.event_date}</h2></div><button className="icon-button" onClick={() => setSelected(null)}><X size={18} /></button></div>
             <div className="event-stat-grid"><Stat label="Abnormal return" value={pct(selected.abnormal_return)} /><Stat label="Volume multiple" value={`${num(selected.volume_multiple)}×`} /><Stat label="Return sigma" value={`${num(selected.return_sigma)}σ`} /><Stat label="Severity score" value={num(selected.severity_score)} /></div>
-            <label>Classification<select value={selected.classification} onChange={(e) => setSelected({ ...selected, classification: e.target.value })}>{classifications.map((c) => <option key={c}>{c}</option>)}</select></label>
+            <div className="warning-note"><strong>Automatic evidence:</strong> {selected.cross_reference_summary || "Not cross-referenced yet."}</div><div className="event-stat-grid"><Stat label="Pre-event CAR" value={pct(selected.pre_car_5??null)}/><Stat label="Post-event CAR" value={pct(selected.post_car_5??null)}/><Stat label="Disclosure matches" value={String(selected.matched_disclosure_count||0)}/><Stat label="Pump matches" value={String(selected.matched_pump_cycle_count||0)}/></div><label>Classification<select value={selected.classification} onChange={(e) => setSelected({ ...selected, classification: e.target.value })}>{classifications.map((c) => <option key={c}>{c}</option>)}</select></label>
             <label>Review status<select value={selected.review_status} onChange={(e) => setSelected({ ...selected, review_status: e.target.value })}><option value="pending">Pending</option><option value="in_review">In review</option><option value="reviewed">Reviewed</option></select></label>
             <label>Announcement match<input value={selected.announcement_match || ""} onChange={(e) => setSelected({ ...selected, announcement_match: e.target.value })} placeholder="None, before event, event day, after buildup..." /></label>
             <div className="two-inputs"><label>Insider score<input type="number" min="0" max="100" value={selected.insider_score ?? ""} onChange={(e) => setSelected({ ...selected, insider_score: e.target.value ? Number(e.target.value) : null })} /></label><label>Pump score<input type="number" min="0" max="100" value={selected.pump_score ?? ""} onChange={(e) => setSelected({ ...selected, pump_score: e.target.value ? Number(e.target.value) : null })} /></label></div>

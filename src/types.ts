@@ -71,6 +71,14 @@ export type ResearchEvent = {
   insider_score: number | null;
   pump_score: number | null;
   reviewer_notes: string | null;
+  auto_classification?: string | null;
+  confidence_score?: number | null;
+  explanation_status?: string | null;
+  matched_disclosure_count?: number | null;
+  matched_pump_cycle_count?: number | null;
+  pre_car_5?: number | null;
+  post_car_5?: number | null;
+  cross_reference_summary?: string | null;
 };
 
 export type DataQualityIssue = {

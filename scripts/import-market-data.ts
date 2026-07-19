@@ -1,112 +1,16 @@
 import { createClient } from "@supabase/supabase-js";
 import { parse } from "csv-parse/sync";
-
-const url = process.env.SUPABASE_URL;
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!url || !key) {
-  throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.");
+const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
+if(!url||!key)throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.");
+const sb=createClient(url,key,{auth:{persistSession:false}});
+const{data:project,error:pe}=await sb.from("projects").select("id").order("created_at",{ascending:false}).limit(1).single();
+if(pe||!project)throw pe||new Error("Project not found.");
+const files=["nepse_research_dataset_part_1.csv","nepse_research_dataset_part_2.csv"];
+const num=(v:unknown)=>{if(v===""||v==null)return null;const x=Number(String(v).replace(/,/g,"").trim());return Number.isFinite(x)?x:null};
+let total=0;
+for(const path of files){
+ const{data:blob,error}=await sb.storage.from("research-files").download(path);if(error||!blob)throw error||new Error(`Download failed: ${path}`);
+ const rows=parse(await blob.text(),{columns:true,skip_empty_lines:true,relax_column_count:true,trim:true}) as Record<string,string>[];
+ for(let i=0;i<rows.length;i+=1000){const chunk=rows.slice(i,i+1000).map(r=>({project_id:project.id,symbol:r.Symbol?.trim(),trade_date:r.Date?.trim(),open_price:num(r.Open),high_price:num(r.High),low_price:num(r.Low),close_price:num(r.Close),volume:num(r.Vol),turnover:num(r.Turnover),transactions:num(r["Trans."]),previous_close:num(r["Prev. Close"]),stock_return:num(r.Return),market_return:num(r.Market_Return),abnormal_return:num(r.Abnormal_Return),source_name:"nepse_research_dataset NEW.csv"})).filter(r=>r.symbol&&r.trade_date);const{error:e}=await sb.from("research_market_data").upsert(chunk,{onConflict:"project_id,symbol,trade_date,source_name"});if(e)throw e;total+=chunk.length;console.log(`${path}: ${Math.min(i+1000,rows.length)}/${rows.length}`)}
 }
-
-const supabase = createClient(url, key, {
-  auth: { persistSession: false },
-});
-
-const { data: project, error: projectError } = await supabase
-  .from("projects")
-  .select("id")
-  .order("created_at", { ascending: false })
-  .limit(1)
-  .single();
-
-if (projectError || !project) {
-  throw projectError || new Error("Project not found.");
-}
-
-const storageFiles = [
-  "nepse_research_dataset_part_1.csv",
-  "nepse_research_dataset_part_2.csv",
-];
-
-const canonicalSourceName = "nepse_research_dataset NEW.csv";
-
-const toNumber = (value: unknown): number | null => {
-  if (value === "" || value === null || value === undefined) {
-    return null;
-  }
-
-  const parsed = Number(String(value).replace(/,/g, "").trim());
-  return Number.isFinite(parsed) ? parsed : null;
-};
-
-let totalImported = 0;
-
-for (const storagePath of storageFiles) {
-  console.log(`Downloading ${storagePath}...`);
-
-  const { data: blob, error: downloadError } = await supabase.storage
-    .from("research-files")
-    .download(storagePath);
-
-  if (downloadError || !blob) {
-    throw downloadError || new Error(`Could not download ${storagePath}.`);
-  }
-
-  console.log(`Parsing ${storagePath}...`);
-
-  const records = parse(await blob.text(), {
-    columns: true,
-    skip_empty_lines: true,
-    relax_column_count: true,
-    trim: true,
-  }) as Record<string, string>[];
-
-  let fileImported = 0;
-
-  for (let i = 0; i < records.length; i += 1000) {
-    const chunk = records.slice(i, i + 1000).map((row) => ({
-      project_id: project.id,
-      symbol: row.Symbol?.trim(),
-      trade_date: row.Date?.trim(),
-      open_price: toNumber(row.Open),
-      high_price: toNumber(row.High),
-      low_price: toNumber(row.Low),
-      close_price: toNumber(row.Close),
-      volume: toNumber(row.Vol),
-      turnover: toNumber(row.Turnover),
-      transactions: toNumber(row["Trans."]),
-      previous_close: toNumber(row["Prev. Close"]),
-      stock_return: toNumber(row.Return),
-      market_return: toNumber(row.Market_Return),
-      abnormal_return: toNumber(row.Abnormal_Return),
-      source_name: canonicalSourceName,
-    }));
-
-    const validChunk = chunk.filter(
-      (row) => row.symbol && row.trade_date
-    );
-
-    const { error: upsertError } = await supabase
-      .from("research_market_data")
-      .upsert(validChunk, {
-        onConflict: "project_id,symbol,trade_date,source_name",
-      });
-
-    if (upsertError) {
-      throw new Error(
-        `Import failed in ${storagePath} near row ${i + 1}: ${upsertError.message}`
-      );
-    }
-
-    fileImported += validChunk.length;
-    totalImported += validChunk.length;
-
-    console.log(
-      `${storagePath}: imported ${fileImported}/${records.length}`
-    );
-  }
-
-  console.log(`Completed ${storagePath}: ${fileImported} rows.`);
-}
-
-console.log(`Completed full import: ${totalImported} market rows.`);
+console.log(`Completed full import: ${total} rows.`);
