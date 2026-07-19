@@ -1,7 +1,7 @@
 {
   "name": "nepse-research-intelligence-system",
   "private": true,
-  "version": "7.0.1",
+  "version": "7.0.2",
   "packageManager": "npm@10.9.8",
   "type": "module",
   "scripts": {
@@ -13,6 +13,7 @@
     "@supabase/supabase-js": "2.49.1",
     "csv-parse": "5.6.0",
     "lucide-react": "0.468.0",
+    "nepse-api-unofficial": "1.0.3",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
