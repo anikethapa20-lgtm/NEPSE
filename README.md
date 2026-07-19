@@ -25,3 +25,6 @@ Every sidebar module is now operational:
 4. Run `Import Market Dataset` once.
 5. Queued Event Detection and Pump jobs are processed hourly by `Process Analysis Jobs`, or run that workflow manually.
 6. Run the NEPSE API sync to populate announcements, then use the Match Events button.
+
+## V9 streamlined workspace
+V9 reduces the main navigation to seven task-focused areas and adds an internet evidence ingestion pipeline. Run the `Sync Public Evidence` GitHub Action before a new cross-reference run.

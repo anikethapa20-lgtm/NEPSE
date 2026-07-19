@@ -1,18 +1,20 @@
-name: Import Market Dataset
+name: Sync Public Evidence
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "20 1,7,13,19 * * *"
 jobs:
-  import-market-data:
+  sync-evidence:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.5"
       - run: bun install
-      - name: Import uploaded research CSV
+      - name: Sync official and public evidence
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: bun run scripts/import-market-data.ts
+        run: bun run scripts/sync-public-evidence.ts
