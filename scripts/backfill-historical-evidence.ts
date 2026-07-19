@@ -461,6 +461,36 @@ function gdeltTimestamp(date: Date) {
   ].join("");
 }
 
+function parseGdeltDate(value: unknown): string | null {
+  const raw = String(value || "").trim();
+
+  if (!raw) {
+    return null;
+  }
+
+  const compact = raw.match(
+    /^(\d{4})(\d{2})(\d{2})(?:T)?(\d{2})(\d{2})(\d{2})/
+  );
+
+  if (compact) {
+    const [, year, month, day, hour, minute, second] = compact;
+
+    const parsed = new Date(
+      `${year}-${month}-${day}T${hour}:${minute}:${second}Z`
+    );
+
+    return Number.isNaN(parsed.getTime())
+      ? null
+      : parsed.toISOString();
+  }
+
+  const parsed = new Date(raw);
+
+  return Number.isNaN(parsed.getTime())
+    ? null
+    : parsed.toISOString();
+}
+
 async function crawlGdelt(aliases: Alias[]) {
   const runId = await createRun("gdelt-news");
   let recordsSaved = 0;
@@ -607,9 +637,9 @@ async function crawlGdelt(aliases: Alias[]) {
             article.title || ""
           ).trim();
 
-          const published = article.seendate
-            ? new Date(article.seendate).toISOString()
-            : null;
+          const published = parseGdeltDate(
+            article.seendate
+          );
 
           if (
             !title ||
