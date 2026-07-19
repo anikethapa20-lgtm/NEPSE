@@ -462,8 +462,15 @@ function gdeltTimestamp(date: Date) {
 }
 
 async function crawlGdelt(aliases: Alias[]) {
+  const runId = await createRun("gdelt-news");
+  let recordsSaved = 0;
+  let disclosuresSaved = 0;
+  let chunksScanned = 0;
+
+  const now = new Date();
+
   const gdeltSupportedStart = new Date(
-    Date.now() - 89 * 24 * 60 * 60 * 1000
+    now.getTime() - 89 * 24 * 60 * 60 * 1000
   );
 
   const gdeltStartDate =
@@ -472,53 +479,272 @@ async function crawlGdelt(aliases: Alias[]) {
       : START_DATE;
 
   const gdeltEndDate =
-    END_DATE > new Date()
-      ? new Date()
+    END_DATE > now
+      ? now
       : END_DATE;
 
   console.log(
     `GDELT recent-news coverage: ${gdeltStartDate.toISOString()} through ${gdeltEndDate.toISOString()}`
   );
 
-  const items = (json.articles || []).map((article: any): EvidenceItem | null => {
-        const title = String(article.title || "").trim();
-        const published = article.seendate ? new Date(article.seendate).toISOString() : null;
-        if (!title || !published || !inRequestedRange(published) || rejectPatterns.some((pattern) => pattern.test(title))) return null;
-        const company = identifyCompany(title, aliases);
-        const terms = keywordMatches(title);
-        if (!company.symbol || terms.length === 0) return null;
-        const sourceUrl = String(article.url || "");
-        if (!sourceUrl) return null;
-        return {
-          source_name: article.domain || "GDELT News Discovery",
-          source_type: "news",
-          source_url: sourceUrl,
-          title,
-          published_at: published,
-          summary: null,
-          symbol: company.symbol,
-          company_name: company.company_name,
-          authority_score: 50,
-          evidence_type: evidenceType(title),
-          relevance_score: Math.min(82, 52 + terms.length * 7),
-          matched_terms: [company.matched, ...terms].filter(Boolean).slice(0, 15) as string[],
-          is_relevant: true,
-          validation_status: "discovery_only",
-          source_domain: article.domain || new URL(sourceUrl).hostname,
-          language: article.language || null,
-          metadata: { gdelt: true, discovery_only: true, month: gdeltTimestamp(chunk.start) },
-        };
-      }).filter(Boolean) as EvidenceItem[];
-      const saved = await saveItems(items, runId);
+  try {
+    for (const chunk of monthChunks(gdeltStartDate, gdeltEndDate)) {
+      const month = chunk.start.toISOString().slice(0, 7);
+
+      const query = encodeURIComponent(
+        '(NEPSE OR "Nepal Stock Exchange") ' +
+        '(dividend OR bonus OR rights OR merger OR acquisition OR IPO OR FPO ' +
+        'OR suspension OR "financial results" OR appointment OR resignation OR penalty)'
+      );
+
+      const endpoint =
+        "https://api.gdeltproject.org/api/v2/doc/doc" +
+        `?query=${query}` +
+        "&mode=ArtList" +
+        "&format=json" +
+        "&maxrecords=250" +
+        "&sort=HybridRel" +
+        `&startdatetime=${gdeltTimestamp(chunk.start)}` +
+        `&enddatetime=${gdeltTimestamp(chunk.end)}`;
+
+      console.log(`Fetching GDELT ${month}`);
+
+      let json: any = null;
+
+      for (
+        let attempt = 1;
+        attempt <= GDELT_MAX_RETRIES;
+        attempt++
+      ) {
+        try {
+          const response = await fetch(endpoint, {
+            headers: {
+              "user-agent": "NEPSE-Market-Integrity-Research/1.0",
+              accept: "application/json",
+            },
+            signal: AbortSignal.timeout(40_000),
+          });
+
+          if (response.status === 429) {
+            const retryAfter = Number(
+              response.headers.get("retry-after") || 0
+            );
+
+            const waitMs =
+              retryAfter > 0
+                ? retryAfter * 1000
+                : GDELT_DELAY_MS * Math.pow(2, attempt);
+
+            console.warn(
+              `GDELT ${month}: HTTP 429. ` +
+              `Retry ${attempt}/${GDELT_MAX_RETRIES} after ${waitMs}ms`
+            );
+
+            await sleep(waitMs);
+            continue;
+          }
+
+          if (!response.ok) {
+            console.warn(
+              `GDELT ${month}: HTTP ${response.status}`
+            );
+            break;
+          }
+
+          const body = await response.text();
+
+          if (!body.trim()) {
+            console.warn(`GDELT ${month}: empty response`);
+            break;
+          }
+
+          try {
+            json = JSON.parse(body);
+            break;
+          } catch {
+            console.warn(
+              `GDELT ${month}: non-JSON response: ` +
+              body.slice(0, 160).replace(/\s+/g, " ")
+            );
+
+            if (attempt < GDELT_MAX_RETRIES) {
+              await sleep(
+                GDELT_DELAY_MS * Math.pow(2, attempt)
+              );
+            }
+          }
+        } catch (requestError) {
+          const message =
+            requestError instanceof Error
+              ? requestError.message
+              : String(requestError);
+
+          console.warn(
+            `GDELT ${month}: request failed on attempt ` +
+            `${attempt}/${GDELT_MAX_RETRIES}: ${message}`
+          );
+
+          if (attempt < GDELT_MAX_RETRIES) {
+            await sleep(
+              GDELT_DELAY_MS * Math.pow(2, attempt)
+            );
+          }
+        }
+      }
+
+      chunksScanned += 1;
+
+      if (!json) {
+        console.warn(
+          `Skipping GDELT ${month} after retries`
+        );
+        continue;
+      }
+
+      const items = (json.articles || [])
+        .map((article: any): EvidenceItem | null => {
+          const title = String(
+            article.title || ""
+          ).trim();
+
+          const published = article.seendate
+            ? new Date(article.seendate).toISOString()
+            : null;
+
+          if (
+            !title ||
+            !published ||
+            !inRequestedRange(published) ||
+            rejectPatterns.some((pattern) =>
+              pattern.test(title)
+            )
+          ) {
+            return null;
+          }
+
+          const company = identifyCompany(
+            title,
+            aliases
+          );
+
+          const terms = keywordMatches(title);
+
+          if (!company.symbol || terms.length === 0) {
+            return null;
+          }
+
+          const sourceUrl = String(
+            article.url || ""
+          );
+
+          if (!sourceUrl) {
+            return null;
+          }
+
+          let sourceDomain =
+            article.domain || null;
+
+          if (!sourceDomain) {
+            try {
+              sourceDomain =
+                new URL(sourceUrl).hostname;
+            } catch {
+              sourceDomain =
+                "GDELT News Discovery";
+            }
+          }
+
+          return {
+            source_name:
+              article.domain ||
+              "GDELT News Discovery",
+            source_type: "news",
+            source_url: sourceUrl,
+            title,
+            published_at: published,
+            summary: null,
+            symbol: company.symbol,
+            company_name:
+              company.company_name,
+            authority_score: 50,
+            evidence_type:
+              evidenceType(title),
+            relevance_score: Math.min(
+              82,
+              52 + terms.length * 7
+            ),
+            matched_terms: [
+              company.matched,
+              ...terms,
+            ]
+              .filter(Boolean)
+              .slice(0, 15) as string[],
+            is_relevant: true,
+            validation_status:
+              "discovery_only",
+            source_domain: sourceDomain,
+            language:
+              article.language || null,
+            metadata: {
+              gdelt: true,
+              discovery_only: true,
+              month,
+            },
+          };
+        })
+        .filter(Boolean) as EvidenceItem[];
+
+      const saved = await saveItems(
+        items,
+        runId
+      );
+
       recordsSaved += saved.evidenceSaved;
-      disclosuresSaved += saved.disclosuresSaved;
+      disclosuresSaved +=
+        saved.disclosuresSaved;
+
+      console.log(
+        `GDELT ${month}: saved ${saved.evidenceSaved} evidence records`
+      );
+
       await sleep(GDELT_DELAY_MS);
     }
-    await finishRun(runId, "completed", { records_saved: recordsSaved, disclosures_saved: disclosuresSaved, pages_scanned: chunksScanned, source_key: "gdelt-news" });
-    console.log("GDELT historical backfill complete", { recordsSaved, disclosuresSaved, chunksScanned });
+
+    await finishRun(runId, "completed", {
+      records_saved: recordsSaved,
+      disclosures_saved:
+        disclosuresSaved,
+      pages_scanned: chunksScanned,
+      source_key: "gdelt-news",
+    });
+
+    console.log(
+      "GDELT recent-news backfill complete",
+      {
+        recordsSaved,
+        disclosuresSaved,
+        chunksScanned,
+      }
+    );
   } catch (error) {
-    const message = error instanceof Error ? error.message : JSON.stringify(error);
-    await finishRun(runId, "failed", { records_saved: recordsSaved, disclosures_saved: disclosuresSaved, pages_scanned: chunksScanned }, message);
+    const message =
+      error instanceof Error
+        ? error.message
+        : JSON.stringify(error);
+
+    await finishRun(
+      runId,
+      "failed",
+      {
+        records_saved: recordsSaved,
+        disclosures_saved:
+          disclosuresSaved,
+        pages_scanned: chunksScanned,
+        source_key: "gdelt-news",
+      },
+      message
+    );
+
     throw error;
   }
 }
