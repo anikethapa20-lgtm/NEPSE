@@ -58,11 +58,18 @@ def extract_rows(value: Any) -> list[dict[str, Any]]:
     return []
 
 
-def post_rows(table: str, rows: list[dict[str, Any]]) -> None:
+def post_rows(
+    table: str,
+    rows: list[dict[str, Any]],
+    on_conflict: str | None = None,
+) -> None:
     if not rows:
         return
 
     endpoint = f"{SUPABASE_URL}/rest/v1/{table}"
+
+    if on_conflict:
+        endpoint += f"?on_conflict={on_conflict}"
 
     for start in range(0, len(rows), 250):
         chunk = rows[start : start + 250]
@@ -169,8 +176,8 @@ def main() -> None:
         for row in directory_rows
     ]
 
-    post_rows("nepse_securities", directory_rows)
-    post_rows("company_aliases", alias_rows)
+    post_rows("nepse_securities", directory_rows, "symbol")
+    post_rows("company_aliases", alias_rows, "symbol")
 
     names = sum(
         1
