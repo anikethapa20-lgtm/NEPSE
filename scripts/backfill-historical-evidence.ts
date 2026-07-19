@@ -466,97 +466,21 @@ async function crawlGdelt(aliases: Alias[]) {
     Date.now() - 89 * 24 * 60 * 60 * 1000
   );
 
-  if (startDate < gdeltSupportedStart) {
-    startDate = gdeltSupportedStart;
-  }
+  const gdeltStartDate =
+    START_DATE < gdeltSupportedStart
+      ? gdeltSupportedStart
+      : START_DATE;
+
+  const gdeltEndDate =
+    END_DATE > new Date()
+      ? new Date()
+      : END_DATE;
 
   console.log(
-    `GDELT recent-news coverage: ${startDate.toISOString()} through ${endDate.toISOString()}`
+    `GDELT recent-news coverage: ${gdeltStartDate.toISOString()} through ${gdeltEndDate.toISOString()}`
   );
 
-  const runId = await createRun("gdelt-news");
-  let recordsSaved = 0;
-  let disclosuresSaved = 0;
-  let chunksScanned = 0;
-  try {
-    for (const chunk of monthChunks(START_DATE, END_DATE)) {
-      const query = encodeURIComponent('(NEPSE OR "Nepal Stock Exchange") (dividend OR bonus OR rights OR merger OR acquisition OR IPO OR FPO OR suspension OR "financial results" OR appointment OR resignation OR penalty)');
-      const endpoint = `https://api.gdeltproject.org/api/v2/doc/doc?query=${query}&mode=ArtList&format=json&maxrecords=250&sort=HybridRel&startdatetime=${gdeltTimestamp(chunk.start)}&enddatetime=${gdeltTimestamp(chunk.end)}`;
-      console.log(`Fetching GDELT ${gdeltTimestamp(chunk.start)}`);
-      let json: any = null;
-      let completed = false;
-
-      for(let attempt=1;attempt<=GDELT_MAX_RETRIES;attempt++){
-        const response = await fetch(endpoint,{
-          headers:{
-            "user-agent":"NEPSE-Market-Integrity-Research/1.0",
-            "accept":"application/json"
-          },
-          signal:AbortSignal.timeout(40_000)
-        });
-
-        if(response.status===429){
-          const retryAfter=Number(response.headers.get("retry-after")||0);
-          const waitMs=retryAfter>0
-            ?retryAfter*1000
-            :GDELT_DELAY_MS*Math.pow(2,attempt);
-
-          console.warn(
-            `GDELT ${gdeltTimestamp(chunk.start)}: HTTP 429. `+
-            `Retry ${attempt}/${GDELT_MAX_RETRIES} after ${waitMs}ms`
-          );
-
-          await sleep(waitMs);
-          continue;
-        }
-
-        if(!response.ok){
-          console.warn(
-            `GDELT ${gdeltTimestamp(chunk.start)}: HTTP ${response.status}`
-          );
-          completed=true;
-          break;
-        }
-
-        const body=await response.text();
-
-        if(!body.trim()){
-          console.warn(
-            `GDELT ${gdeltTimestamp(chunk.start)}: empty response`
-          );
-          completed=true;
-          break;
-        }
-
-        try{
-          json=JSON.parse(body);
-          completed=true;
-          break;
-        }catch{
-          console.warn(
-            `GDELT ${gdeltTimestamp(chunk.start)}: non-JSON response: `+
-            body.slice(0,160).replace(/\s+/g," ")
-          );
-
-          if(attempt<GDELT_MAX_RETRIES){
-            await sleep(GDELT_DELAY_MS*Math.pow(2,attempt));
-            continue;
-          }
-
-          completed=true;
-        }
-      }
-
-      chunksScanned += 1;
-
-      if(!completed||!json){
-        console.warn(
-          `Skipping GDELT ${gdeltTimestamp(chunk.start)} after retries`
-        );
-        await sleep(GDELT_DELAY_MS);
-        continue;
-      }
-      const items = (json.articles || []).map((article: any): EvidenceItem | null => {
+  const items = (json.articles || []).map((article: any): EvidenceItem | null => {
         const title = String(article.title || "").trim();
         const published = article.seendate ? new Date(article.seendate).toISOString() : null;
         if (!title || !published || !inRequestedRange(published) || rejectPatterns.some((pattern) => pattern.test(title))) return null;
