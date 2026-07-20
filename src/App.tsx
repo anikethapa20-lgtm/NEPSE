@@ -1,15 +1,101 @@
-import { useEffect,useState } from "react";
+import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { BarChart3,BookOpen,Database,GitCompareArrows,LogOut,Search,Settings,ShieldAlert,Wifi } from "lucide-react";
+import {
+  Activity, BookOpenText, BrainCircuit, Database, FileSearch,
+  GitCompareArrows, LogOut, Menu, Microscope, Settings2, ShieldCheck, X
+} from "lucide-react";
 import { supabase } from "./lib/supabase";
-import Login from "./components/Login";import PublicPortal from "./components/PublicPortal";import Dashboard from "./components/Dashboard";import CrossReferenceAnalysis from "./components/CrossReferenceAnalysis";import InvestigationsHub from "./components/InvestigationsHub";import MarketHub from "./components/MarketHub";import EvidenceHub from "./components/EvidenceHub";import ResearchHub from "./components/ResearchHub";import SettingsHub from "./components/SettingsHub";
-type Tab="dashboard"|"investigations"|"crossref"|"market"|"evidence"|"research"|"settings";
-export default function App(){if(window.location.pathname!=="/login"&&!window.location.pathname.startsWith("/workspace")){return <PublicPortal/>;}const[session,setSession]=useState<Session|null>(null),[loading,setLoading]=useState(true),[projectId,setProjectId]=useState(""),[tab,setTab]=useState<Tab>("dashboard"),[error,setError]=useState("");useEffect(()=>{supabase.auth.getSession().then(({data})=>{setSession(data.session);setLoading(false)});const{data}=supabase.auth.onAuthStateChange((_e,next)=>setSession(next));return()=>data.subscription.unsubscribe()},[]);useEffect(()=>{if(session)loadWorkspace()},[session]);async function loadWorkspace(){setError("");const{data,error}=await supabase.from("project_members").select("project_id").limit(1);if(error||!data?.length){setError("Your account is not approved for this private workspace.");return}setProjectId(data[0].project_id)}if(loading)return <div className="center">Loading…</div>;if(!session)return <Login/>;const nav=[
-["dashboard","Overview",<BarChart3 size={18}/>],
-["investigations","Investigations",<ShieldAlert size={18}/>],
-["crossref","Cross-reference",<GitCompareArrows size={18}/>],
-["market","Market & companies",<Search size={18}/>],
-["evidence","Public evidence",<Wifi size={18}/>],
-["research","Research outputs",<BookOpen size={18}/>],
-["settings","Settings",<Settings size={18}/>]
-] as const;return <div className="app-shell"><aside className="sidebar"><div className="brand"><div className="brand-icon"><Database size={22}/></div><div><strong>NEPSE Integrity</strong><span>Research workspace</span></div></div><div className="sidebar-caption">WORKSPACE</div><nav className="main-nav system-nav">{nav.map(([key,label,icon])=><button key={key} className={tab===key?"active":""} onClick={()=>setTab(key as Tab)}>{icon}<span>{label}</span></button>)}</nav><div className="sidebar-status"><span className="status-dot"/>Evidence engine online</div><div className="sidebar-bottom"><span>{session.user.email}</span><button onClick={()=>supabase.auth.signOut()}><LogOut size={16}/> Sign out</button></div></aside><main className="workspace"><div className="mobile-topbar"><strong>NEPSE Integrity</strong><select value={tab} onChange={e=>setTab(e.target.value as Tab)}>{nav.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></div>{error&&<div className="error-banner">{error}</div>}{!error&&projectId&&<>{tab==="dashboard"&&<Dashboard projectId={projectId}/>} {tab==="investigations"&&<InvestigationsHub projectId={projectId}/>} {tab==="crossref"&&<CrossReferenceAnalysis projectId={projectId}/>} {tab==="market"&&<MarketHub projectId={projectId}/>} {tab==="evidence"&&<EvidenceHub projectId={projectId}/>} {tab==="research"&&<ResearchHub projectId={projectId}/>} {tab==="settings"&&<SettingsHub projectId={projectId}/>}</>}</main></div>}
+import Login from "./components/Login";
+import Dashboard from "./components/Dashboard";
+import CrossReferenceAnalysis from "./components/CrossReferenceAnalysis";
+import InvestigationsHub from "./components/InvestigationsHub";
+import MarketHub from "./components/MarketHub";
+import EvidenceHub from "./components/EvidenceHub";
+import ResearchHub from "./components/ResearchHub";
+import SettingsHub from "./components/SettingsHub";
+
+type Tab = "command" | "investigations" | "crossref" | "market" | "evidence" | "outputs" | "settings";
+
+const NAV = [
+  ["command", "Command", "Research overview", Activity],
+  ["investigations", "Events", "Signals and cases", Microscope],
+  ["crossref", "Matching", "Evidence cross-reference", GitCompareArrows],
+  ["market", "Market", "Companies and prices", Database],
+  ["evidence", "Evidence", "Disclosures and sources", FileSearch],
+  ["outputs", "Outputs", "Paper and findings", BookOpenText],
+  ["settings", "Control", "Quality and administration", Settings2],
+] as const;
+
+export default function App() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [projectId, setProjectId] = useState("");
+  const [tab, setTab] = useState<Tab>("command");
+  const [error, setError] = useState("");
+  const [mobileNav, setMobileNav] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setLoading(false); });
+    const { data } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => { if (session) loadWorkspace(); else setProjectId(""); }, [session]);
+
+  async function loadWorkspace() {
+    setError("");
+    const { data, error } = await supabase.from("project_members").select("project_id").limit(1);
+    if (error || !data?.length) { setError("This account has not been approved for the NEPSE V14 research workspace."); return; }
+    setProjectId(data[0].project_id);
+  }
+
+  if (loading) return <div className="v14-loading"><BrainCircuit size={30}/><span>Initializing research environment…</span></div>;
+  if (!session) return <Login />;
+  const active = NAV.find(([key]) => key === tab)!;
+
+  return <div className="v14-shell terminal-shell">
+    <header className="terminal-header">
+      <div className="terminal-brand">
+        <div className="terminal-logo"><Activity size={21}/></div>
+        <div><strong>NEPSE <em>V14</em></strong><span>MARKET INTEGRITY LAB</span></div>
+      </div>
+      <div className="terminal-market-strip">
+        <span><i/>PRIVATE RESEARCH</span>
+        <span>DATASET <b>2015—2026</b></span>
+        <span>MODE <b>FORENSIC</b></span>
+      </div>
+      <div className="terminal-account">
+        <div><strong>{session.user.email?.split("@")[0]}</strong><span>Approved researcher</span></div>
+        <button title="Sign out" onClick={() => supabase.auth.signOut()}><LogOut size={17}/></button>
+      </div>
+      <button className="terminal-menu" onClick={() => setMobileNav(true)}><Menu size={21}/></button>
+    </header>
+
+    <nav className={`terminal-nav ${mobileNav ? "open" : ""}`}>
+      <div className="terminal-mobile-head"><strong>Research modules</strong><button onClick={() => setMobileNav(false)}><X size={19}/></button></div>
+      {NAV.map(([key, label, description, Icon]) => <button key={key} className={tab === key ? "active" : ""} onClick={() => { setTab(key as Tab); setMobileNav(false); }}>
+        <Icon size={17}/><span><strong>{label}</strong><small>{description}</small></span>
+      </button>)}
+    </nav>
+
+    <main className="terminal-main">
+      <div className="terminal-page-head">
+        <div><span>NEPSE V14 / {active[1]}</span><h1>{active[2]}</h1></div>
+        <div className="terminal-access"><ShieldCheck size={16}/><span>Research-only environment</span></div>
+      </div>
+      <div className="v14-content terminal-content">
+        {error && <div className="error-banner">{error}</div>}
+        {!error && projectId && <>
+          {tab === "command" && <Dashboard projectId={projectId}/>} 
+          {tab === "investigations" && <InvestigationsHub projectId={projectId}/>} 
+          {tab === "crossref" && <CrossReferenceAnalysis projectId={projectId}/>} 
+          {tab === "market" && <MarketHub projectId={projectId}/>} 
+          {tab === "evidence" && <EvidenceHub projectId={projectId}/>} 
+          {tab === "outputs" && <ResearchHub projectId={projectId}/>} 
+          {tab === "settings" && <SettingsHub projectId={projectId}/>} 
+        </>}
+      </div>
+    </main>
+    {mobileNav && <button className="terminal-overlay" onClick={() => setMobileNav(false)} aria-label="Close navigation"/>}
+  </div>;
+}

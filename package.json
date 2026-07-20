@@ -1,7 +1,7 @@
 {
-  "name": "nepse-research-intelligence-system",
+  "name": "nepse-v14-research-only",
   "private": true,
-  "version": "13.2.0",
+  "version": "14.1.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
