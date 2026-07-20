@@ -1,14 +1,7 @@
 [build]
-  command = "npm run build"
+  command = "npm ci && npm run build"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
-  NPM_VERSION = "10.9.8"
-  NPM_FLAGS = "--include=dev --no-audit --no-fund"
-  NPM_CONFIG_PRODUCTION = "false"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+  NPM_VERSION = "10.8.2"
