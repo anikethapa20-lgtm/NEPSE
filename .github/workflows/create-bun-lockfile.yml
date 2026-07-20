@@ -7,7 +7,7 @@ permissions:
   contents: write
 
 jobs:
-  create-lock:
+  lockfile:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,18 +17,21 @@ jobs:
         with:
           bun-version: "1.3.5"
 
-      - name: Install dependencies with Bun
+      - name: Generate Bun lockfile
         run: |
-          rm -rf node_modules
-          bun install
+          rm -rf node_modules bun.lock bun.lockb
+          bun install --lockfile-only
+          test -f bun.lock
 
-      - name: Verify production build
-        run: bun run build
+      - name: Verify lockfile
+        run: |
+          head -20 bun.lock
+          git status --short
 
       - name: Commit Bun lockfile
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add bun.lock bun.lockb package.json 2>/dev/null || true
-          git commit -m "Use Bun for dependency installation" || exit 0
+          git add bun.lock
+          git commit -m "Add Bun lockfile" || exit 0
           git push
