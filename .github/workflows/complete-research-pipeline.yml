@@ -1,0 +1,33 @@
+name: Complete Research Pipeline
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 */6 * * *'
+concurrency:
+  group: nepse-research-pipeline
+  cancel-in-progress: false
+jobs:
+  complete:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.13.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile=false
+      - name: Queue incomplete research
+        run: pnpm exec tsx scripts/autonomous-research-engine.ts
+        env: &supabase
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      - name: Process all queued jobs
+        run: pnpm exec tsx scripts/process-analysis-jobs.ts
+        env: *supabase
+      - name: Validate terminal completion
+        run: pnpm validate:research
+        env: *supabase

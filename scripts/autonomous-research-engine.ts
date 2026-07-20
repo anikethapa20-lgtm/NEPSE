@@ -1,10 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
-const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;if(!url||!key)throw new Error('Missing Supabase secrets.');
-const sb=createClient(url,key,{auth:{persistSession:false}});
-async function all(table:string,select:string,projectId:string){const out:any[]=[];for(let from=0;;from+=1000){const{data,error}=await sb.from(table).select(select).eq('project_id',projectId).order('id').range(from,from+999);if(error)throw error;out.push(...(data||[]));if(!data||data.length<1000)break}return out}
-const{data:projects,error:pe}=await sb.from('projects').select('id').order('created_at',{ascending:false});if(pe)throw pe;
-for(const project of projects||[]){const projectId=project.id;const events=await all('research_events','id,cross_referenced_at,explanation_status,auto_classification,classification',projectId);const pending=events.filter(e=>!e.cross_referenced_at);const queued=await sb.from('analysis_jobs').select('id').eq('project_id',projectId).eq('status','queued').limit(1);
- if(pending.length&&!queued.data?.length){const{error}=await sb.from('analysis_jobs').insert({project_id:projectId,job_type:'cross_reference',status:'queued',parameters:{autonomous:true,terminal_outcomes:true}});if(error)throw error;console.log(`Queued cross-reference for ${pending.length} pending events.`)}
- for(let i=0;i<events.length;i+=500){const updates=events.slice(i,i+500).filter(e=>e.cross_referenced_at).map(e=>({id:e.id,processing_status:'completed',processed_at:e.cross_referenced_at,terminal_outcome:e.explanation_status==='explained'?'explained':e.explanation_status||'unexplained'}));for(const u of updates){const{id,...patch}=u;const{error}=await sb.from('research_events').update(patch).eq('id',id);if(error)throw error}}
- const completed=events.filter(e=>e.cross_referenced_at).length;console.log(`${projectId}: ${completed}/${events.length} processed (${events.length?Math.round(completed/events.length*100):0}%).`)
+const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
+if(!url||!key)throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.');
+const sb=createClient(url,key,{auth:{persistSession:false}}),VERSION='v13.2';
+async function page(table:string,select:string,projectId:string){const out:any[]=[];for(let from=0;;from+=1000){const{data,error}=await sb.from(table).select(select).eq('project_id',projectId).order('id').range(from,from+999);if(error)throw error;out.push(...(data||[]));if(!data||data.length<1000)break}return out}
+async function queue(projectId:string,jobType:string,parameters:any){const{data:existing,error}=await sb.from('analysis_jobs').select('id,status').eq('project_id',projectId).eq('job_type',jobType).in('status',['queued','running']).limit(1);if(error)throw error;if(existing?.length)return false;const{error:insertError}=await sb.from('analysis_jobs').insert({project_id:projectId,job_type:jobType,status:'queued',parameters,worker_version:VERSION,records_processed:0});if(insertError)throw insertError;return true}
+const{data:projects,error}=await sb.from('projects').select('id').order('created_at',{ascending:false});if(error)throw error;
+for(const p of projects||[]){
+ const events=await page('research_events','id,processing_status,cross_referenced_at,terminal_outcome,explanation_status',p.id);
+ const pending=events.filter(e=>e.processing_status!=='completed'||!e.cross_referenced_at||!e.terminal_outcome);
+ const failed=events.filter(e=>e.processing_status==='failed');
+ const staleBefore=new Date(Date.now()-2*60*60*1000).toISOString();
+ await sb.from('analysis_jobs').update({status:'failed',error_message:'Marked failed after two hours without completion.',completed_at:new Date().toISOString()}).eq('project_id',p.id).eq('status','running').lt('heartbeat_at',staleBefore);
+ if(pending.length){const created=await queue(p.id,'cross_reference',{autonomous:true,processing_version:VERSION,reprocess_failed:failed.length>0,terminal_outcomes:true});if(created)console.log(`${p.id}: queued ${pending.length} events.`)}
+ const complete=events.filter(e=>e.processing_status==='completed'&&e.cross_referenced_at&&e.terminal_outcome).length;
+ console.log(`${p.id}: ${complete}/${events.length} terminally processed (${events.length?((complete/events.length)*100).toFixed(2):'0.00'}%).`);
 }

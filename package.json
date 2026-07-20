@@ -1,12 +1,13 @@
 {
   "name": "nepse-research-intelligence-system",
   "private": true,
-  "version": "13.0.0",
+  "version": "13.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "validate:research": "tsx scripts/validate-research-completion.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.49.1",
@@ -20,7 +21,8 @@
     "@types/react-dom": "18.3.5",
     "@vitejs/plugin-react": "4.3.4",
     "typescript": "5.7.2",
-    "vite": "6.0.5"
+    "vite": "6.0.5",
+    "tsx": "4.19.2"
   },
   "packageManager": "pnpm@10.13.1"
 }
