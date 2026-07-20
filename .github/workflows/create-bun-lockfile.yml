@@ -1,4 +1,4 @@
-name: Create Bun lockfile
+name: Create Bun binary lockfile
 
 on:
   workflow_dispatch:
@@ -17,21 +17,35 @@ jobs:
         with:
           bun-version: "1.3.5"
 
-      - name: Generate Bun lockfile
+      - name: Generate bun.lockb
         run: |
-          rm -rf node_modules bun.lock bun.lockb
-          bun install --lockfile-only
-          test -f bun.lock
+          rm -rf node_modules bun.lock bun.lockb package-lock.json
 
-      - name: Verify lockfile
+          cat > bunfig.toml <<'BUNEOF'
+          [install]
+          registry = "https://registry.npmjs.org"
+          saveTextLockfile = false
+          linker = "hoisted"
+          BUNEOF
+
+          bun install --lockfile-only --ignore-scripts
+
+          test -f bun.lockb
+          ls -lh bun.lockb
+
+      - name: Verify frozen install
         run: |
-          head -20 bun.lock
-          git status --short
+          rm -rf node_modules
+          bun install --frozen-lockfile --ignore-scripts
+          bun run build
 
-      - name: Commit Bun lockfile
+      - name: Commit binary lockfile
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add bun.lock
-          git commit -m "Add Bun lockfile" || exit 0
+
+          git add bun.lockb bunfig.toml
+          git rm -f bun.lock package-lock.json 2>/dev/null || true
+
+          git commit -m "Add Netlify-compatible Bun lockfile" || exit 0
           git push
