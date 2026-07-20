@@ -1,0 +1,22 @@
+name: Autonomous Research Engine
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 */6 * * *'
+jobs:
+  orchestrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile=false
+      - name: Queue and finalize research pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: bun run scripts/autonomous-research-engine.ts
+      - name: Process queued analysis jobs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: bun run scripts/process-analysis-jobs.ts
