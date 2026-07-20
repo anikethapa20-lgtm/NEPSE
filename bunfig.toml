@@ -1,4 +1,0 @@
-[install]
-registry = "https://registry.npmjs.org"
-frozenLockfile = true
-linker = "hoisted"
