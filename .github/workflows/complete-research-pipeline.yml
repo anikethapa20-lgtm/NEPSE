@@ -19,14 +19,14 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm install --frozen-lockfile
       - name: Queue incomplete research
-        run: pnpm exec tsx scripts/autonomous-research-engine.ts
+        run: pnpm research:queue
         env: &supabase
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       - name: Process all queued jobs
-        run: pnpm exec tsx scripts/process-analysis-jobs.ts
+        run: pnpm research:process
         env: *supabase
       - name: Validate terminal completion
         run: pnpm validate:research
